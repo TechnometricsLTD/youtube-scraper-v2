@@ -194,4 +194,4 @@ def download_video_info(url):
 
 if __name__ == "__main__":
     url = "https://www.youtube.com/live/DD3JlT_u0DM?si=16IJzQz6vVebcMZM"
-    download_video_info(url) 
+    download_video_info(url)
