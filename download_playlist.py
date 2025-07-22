@@ -42,6 +42,7 @@ def get_all_channel_video_details(channel_url):
         'extract_flat': True,
         'skip_download': True,
         'yes_playlist': True,
+        'playlistend': None,  # No bound, get all videos in the playlist
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         playlist_info = ydl.extract_info(uploads_playlist_url, download=False)
