@@ -100,6 +100,7 @@ def download_video_info(url):
     # Create a mapping of parent IDs to lists of child comments
     parent_to_children = {}
     
+    
     # Second pass: establish parent-child relationships
     for comment_id, comment in all_comments.items():
         parent = comment["parent"]
