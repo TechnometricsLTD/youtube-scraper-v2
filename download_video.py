@@ -154,10 +154,16 @@ def download_video_info(url):
     
     formatted_data["total_comments"] = comment_count
     formatted_data["total_comments_scraped"] = comment_count_scraped
-    formatted_data["percent_comments"] = 0.5
+    formatted_data["percent_comments"] = comment_count_scraped/comment_count
     formatted_data["total_shares"] = 0  # Setting to 0 since YouTube doesn't provide share count
     # formatted_data["vitality_score"] = video_info.get("view_count", 0) // 1000  # Using view_count for vitality
-    formatted_data["checksum"] = hashlib.md5(json.dumps(formatted_data["comments"]).encode()).hexdigest()#id, 
+    formatted_data["checksum"] = hashlib.md5(
+        (
+            str(video_id) +
+            str(formatted_data.get("posted_at", "")) +
+            json.dumps(formatted_data["comments"], ensure_ascii=False)
+        ).encode()
+    ).hexdigest()
     
     # Create directories if they don't exist
     Path("post_data/image").mkdir(parents=True, exist_ok=True)
