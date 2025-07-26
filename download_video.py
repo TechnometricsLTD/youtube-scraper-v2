@@ -199,6 +199,7 @@ def download_video_info(url):
     print(f"Comments and video info extracted and saved to {output_file}")
     print(f"Total comments from metadata: {comment_count}")
     print(f"Thumbnail saved")
+    return formatted_data
 
 if __name__ == "__main__":
     url = "https://www.youtube.com/watch?v=dt2-E-RkGVI"
