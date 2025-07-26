@@ -32,6 +32,12 @@ def download_video_info(url):
     with open(info_file, 'r', encoding='utf-8') as f:
         video_info = json.load(f)
     
+    # Save the original yt-dlp output before formatting
+    # original_output_file = f"post_data/{video_id}_original_ytdlp.json"
+    # with open(original_output_file, 'w', encoding='utf-8') as f:
+    #     json.dump(video_info, f, indent=2, ensure_ascii=False)
+    # print(f"Original yt-dlp output saved to: {original_output_file}")
+    
     # Format datetime in standard format
     def format_date(timestamp):
         if isinstance(timestamp, int) or (isinstance(timestamp, str) and timestamp.isdigit()):
@@ -51,9 +57,7 @@ def download_video_info(url):
     # Convert to specified format
     current_time = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
     formatted_data = {
-        "_id": {
-            "$oid": hashlib.md5(url.encode()).hexdigest()
-        },
+        "video_id": video_id,
         "type": "page",
         "source": "YouTube",
         "post_url": url,
@@ -62,13 +66,7 @@ def download_video_info(url):
             "$date": current_time
         },
         "post_text": video_info.get("description", ""),
-        "post_topic": {
-            "status": "ok",
-            "topic": {
-                "label": "video",
-                "score": 0.8
-            }
-        },
+        
         "comments": []
     }
     
@@ -83,7 +81,7 @@ def download_video_info(url):
             formatted_timestamp = format_date(timestamp)
             
             comment_data = {
-                "id": comment_id,
+                "comment_id": comment_id,
                 "parent": item.get("parent", ""),
                 "user_pro_pic": item.get("author_thumbnail", ""),
                 "comment_time": {
@@ -125,14 +123,14 @@ def download_video_info(url):
                 for child in parent_to_children[comment_id]:
                     # Remove the parent and id fields - they were just for processing
                     child_copy = child.copy()
-                    child_copy.pop("parent", None)
-                    child_copy.pop("id", None)
+                    # child_copy.pop("parent", None)
+                    # child_copy.pop("id", None)
                     comment["comments_replies"].append(child_copy)
             
             # Add to formatted data, removing the processing fields
             comment_copy = comment.copy()
-            comment_copy.pop("parent", None)
-            comment_copy.pop("id", None)
+            # comment_copy.pop("parent", None)
+            # comment_copy.pop("id", None)
             formatted_data["comments"].append(comment_copy)
     
     # Add reactions and other metadata
@@ -158,8 +156,8 @@ def download_video_info(url):
     formatted_data["total_comments_scraped"] = comment_count_scraped
     formatted_data["percent_comments"] = 0.5
     formatted_data["total_shares"] = 0  # Setting to 0 since YouTube doesn't provide share count
-    formatted_data["vitality_score"] = video_info.get("view_count", 0) // 1000  # Using view_count for vitality
-    formatted_data["checksum"] = hashlib.md5(json.dumps(formatted_data["comments"]).encode()).hexdigest()
+    # formatted_data["vitality_score"] = video_info.get("view_count", 0) // 1000  # Using view_count for vitality
+    formatted_data["checksum"] = hashlib.md5(json.dumps(formatted_data["comments"]).encode()).hexdigest()#id, 
     
     # Create directories if they don't exist
     Path("post_data/image").mkdir(parents=True, exist_ok=True)
@@ -167,7 +165,7 @@ def download_video_info(url):
     # Save formatted JSON
     output_file = f"post_data/{video_id}_formatted_data.json"
     with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(formatted_data, f, indent=3, ensure_ascii=False)
+        json.dump(formatted_data, f, indent=4, ensure_ascii=False)
 
     # Rename the thumbnail file
     if os.path.exists(ss_file):
@@ -184,14 +182,14 @@ def download_video_info(url):
     if os.path.exists(f"{video_id}.webp"):
         os.remove(f"{video_id}.webp")
 
-    '''
+    
     output_file = f"{video_id}" + "_formatted_data.json"
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(formatted_data, f, indent=3, ensure_ascii=False)
     
     print(f"Comments and video info extracted and saved to {output_file}")
     print(f"Total comments from metadata: {comment_count}")
-    print(f"Thumbnail saved")'''
+    print(f"Thumbnail saved")
 
 if __name__ == "__main__":
     url = "https://www.youtube.com/live/DD3JlT_u0DM?si=16IJzQz6vVebcMZM"
