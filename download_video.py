@@ -41,32 +41,33 @@ def download_video_info(url):
     # Format datetime in standard format
     def format_date(timestamp):
         if isinstance(timestamp, int) or (isinstance(timestamp, str) and timestamp.isdigit()):
-            # Convert unix timestamp to dd-MM-yyyy hh:mm format
-            dt = datetime.datetime.fromtimestamp(int(timestamp))
-            return dt.strftime("%d-%m-%Y %H:%M")
+            # Convert unix timestamp to ISO 8601 UTC format
+            dt = datetime.datetime.utcfromtimestamp(int(timestamp))
+            return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
         elif isinstance(timestamp, str):
-            # If it's already a string date but in wrong format
+            # Try to parse ISO or other string formats
             try:
                 dt = datetime.datetime.fromisoformat(timestamp)
-                return dt.strftime("%d-%m-%Y %H:%M")
+                # If the datetime is naive, treat as UTC
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=datetime.timezone.utc)
+                dt = dt.astimezone(datetime.timezone.utc)
+                return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
             except ValueError:
                 pass
-        # Default current time in proper format
-        return datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
+        # Default: current UTC time in ISO 8601 format
+        return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     
     # Convert to specified format
-    current_time = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
+    current_time = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
     formatted_data = {
         "video_id": video_id,
         "type": "page",
         "source": "YouTube",
         "post_url": url,
         "post_title": video_info.get("title", None),
-        "posted_at": {
-            "$date": current_time
-        },
+        "posted_at": current_time,
         "post_text": video_info.get("description", ""),
-        
         "comments": []
     }
     
@@ -84,9 +85,7 @@ def download_video_info(url):
                 "comment_id": comment_id,
                 "parent": item.get("parent", ""),
                 "user_pro_pic": item.get("author_thumbnail", ""),
-                "comment_time": {
-                    "$date": formatted_timestamp
-                },
+                "comment_time": formatted_timestamp,
                 "user_name": item.get("author", ""),
                 "user_profile_url": item.get("author_url", ""),
                 "comment_text": item.get("text", ""),
@@ -154,7 +153,11 @@ def download_video_info(url):
     
     formatted_data["total_comments"] = comment_count
     formatted_data["total_comments_scraped"] = comment_count_scraped
-    formatted_data["percent_comments"] = comment_count_scraped/comment_count
+    # Handle division by zero if comment_count is 0
+    if comment_count == 0:
+        formatted_data["percent_comments"] = None
+    else:
+        formatted_data["percent_comments"] = comment_count_scraped / comment_count
     formatted_data["total_shares"] = 0  # Setting to 0 since YouTube doesn't provide share count
     # formatted_data["vitality_score"] = video_info.get("view_count", 0) // 1000  # Using view_count for vitality
     formatted_data["checksum"] = hashlib.md5(
@@ -189,14 +192,14 @@ def download_video_info(url):
         os.remove(f"{video_id}.webp")
 
     
-    output_file = f"{video_id}" + "_formatted_data.json"
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(formatted_data, f, indent=3, ensure_ascii=False)
+    # output_file = f"{video_id}" + "_formatted_data.json"
+    # with open(output_file, 'w', encoding='utf-8') as f:
+    #     json.dump(formatted_data, f, indent=3, ensure_ascii=False)
     
     print(f"Comments and video info extracted and saved to {output_file}")
     print(f"Total comments from metadata: {comment_count}")
     print(f"Thumbnail saved")
 
 if __name__ == "__main__":
-    url = "https://www.youtube.com/live/DD3JlT_u0DM?si=16IJzQz6vVebcMZM"
+    url = "https://www.youtube.com/watch?v=dt2-E-RkGVI"
     download_video_info(url)
