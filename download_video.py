@@ -61,13 +61,12 @@ def download_video_info(url):
     # Convert to specified format
     current_time = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
     formatted_data = {
-        "video_id": video_id,
-        "type": "page",
-        "source": "YouTube",
+        "post_id": video_id,
+        "source": video_info.get("uploader"),
         "post_url": url,
-        "post_title": video_info.get("title", None),
+        "post_text": video_info.get("title"),
+        "post_description": video_info.get("description", ""),
         "posted_at": current_time,
-        "post_text": video_info.get("description", ""),
         "comments": []
     }
     
