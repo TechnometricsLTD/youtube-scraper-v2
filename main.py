@@ -14,6 +14,8 @@ import yt_dlp
 import json
 from typing import List, Dict, Any, Optional
 
+from download_playlist import get_channel_id
+
 from .youtube_class import Author, Comment, Reactions, Youtube
 
 
@@ -351,7 +353,7 @@ class YouTube:
             posted_at=formatted_data.get("posted_at", ""),
             post_text=formatted_data.get("post_text", ""),
             author=Author(
-                author_id=video_info.get("uploader_id", ""),
+                author_id=get_channel_id(video_info.get("uploader_url", "")),
                 fullname=video_info.get("uploader", ""),
                 username=video_info.get("uploader", ""),
                 profile_url=video_info.get("uploader_url", ""),
