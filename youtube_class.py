@@ -81,3 +81,45 @@ class Youtube:
 
     def to_json(self):
         return json.dumps(datetime_to_dict(self), ensure_ascii=False, indent=4)
+
+
+
+
+@dataclass
+class YoutubeVideo:
+    id: str
+    title: str
+    source: str
+    description: str
+    url: str
+    upload_date: str = None
+    metadata: dict = None
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'source': self.source,
+            'description': self.description,
+            'url': self.url,
+            'upload_date': self.upload_date,
+            'metadata': self.metadata
+        }
+@dataclass
+class YoutubePlaylist:
+    id: str
+    title: str
+    description: str
+    url: str
+    channel_id: str
+    videos: list[YoutubeVideo]
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'url': self.url,
+            'channel_id': self.channel_id,
+            'videos': [video.to_dict() for video in self.videos]
+        }

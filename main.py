@@ -16,7 +16,7 @@ from typing import List, Dict, Any, Optional
 
 from download_playlist import get_channel_id
 
-from .youtube_class import Author, Comment, Reactions, Youtube
+from .youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
 
 
 class YouTube:
@@ -449,7 +449,45 @@ class YouTube:
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             playlist_info = ydl.extract_info(uploads_playlist_id, download=False)
-        return playlist_info
+        return self.formatted_playlist_info(playlist_info)
+
+    def get_all_playlist_video_details(self, playlist_url, limit=None):
+        ydl_opts = {
+                'quiet': False,
+                'verbose': True,
+            'extract_flat': 'in_playlist',  # Changed from True to 'in_playlist' to get more metadata
+            'skip_download': True,
+            'yes_playlist': True,
+            'playlist_items': limit,
+            'approximate_date': True,  # Get approximate upload dates
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            playlist_info = ydl.extract_info(playlist_url, download=False)
+        return self.formatted_playlist_info(playlist_info)
+
+    def formatted_playlist_info(self, playlist_info):
+        videos = []
+        for video in playlist_info.get("entries", []):
+            videos.append(YoutubeVideo(
+                id=video.get("id"),
+                title=video.get("title"),
+                description=video.get("description"),
+                url=video.get("url"),
+                source=video.get("channel"),
+                upload_date=video.get("upload_date"),
+                metadata=video
+            ))
+        
+        youtube_playlist = YoutubePlaylist(
+            id=playlist_info.get("id"),
+            title=playlist_info.get("title"),
+            description=playlist_info.get("description"),
+            url=playlist_info.get("channel_url"),
+            channel_id=playlist_info.get("channel_id"),
+            videos=videos,
+        )
+        return youtube_playlist
+
 
 def main():
     
