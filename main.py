@@ -14,9 +14,9 @@ import yt_dlp
 import json
 from typing import List, Dict, Any, Optional
 
-from download_playlist import get_channel_id
+from .download_playlist import get_channel_id
 
-from youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
+from .youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
 
 
 class YouTube:
