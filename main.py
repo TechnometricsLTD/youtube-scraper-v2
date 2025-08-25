@@ -16,7 +16,7 @@ from typing import List, Dict, Any, Optional
 
 from download_playlist import get_channel_id
 
-from .youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
+from youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
 
 
 class YouTube:
@@ -366,7 +366,7 @@ class YouTube:
                     url=None,
                     parent=comment.get("parent", ""),
                     user_pro_pic=comment.get("author_thumbnail", ""),
-                    comment_time=comment.get("timestamp", ""),
+                    comment_time=datetime.datetime.fromtimestamp(comment.get("timestamp", ""), tz=datetime.timezone.utc),
                     user_name=comment.get("author", ""),
                     user_profile_url=comment.get("author_url", ""),
                     comment_text=comment.get("text", ""),
@@ -506,9 +506,26 @@ def main():
     # Print summary
     # print(f"\n✅ Found {len(results)} video(s) for query: 'Younus'")
 
-    # print("playlist details: ", searcher.get_all_channel_video_details("https://www.youtube.com/@cokestudio"))
+    print("---------------Playlist-----------------")
+    try:
+        
+        playlist = searcher.get_all_playlist_video_details("https://www.youtube.com/playlist?list=PLuzIsIPzt7fnlFslhp9QSWHvqM1f6Vk0p")
+        with open("post_data/playlist.json", "w", encoding="utf-8") as f:
+                # result.to_json() returns a JSON string, so just write it directly
+                f.write(json.dumps(playlist.to_dict(), indent=4, ensure_ascii=False))
+    except Exception as e:
+        print(f"Error: {e}")    
 
-    print("--------------------------------")
+    print("---------------Channel-----------------")
+    try:
+        channel = searcher.get_all_channel_video_details("https://www.youtube.com/@TEBangla")
+        with open("post_data/channel.json", "w", encoding="utf-8") as f:
+                # result.to_json() returns a JSON string, so just write it directly
+                f.write(json.dumps(channel.to_dict(), indent=4, ensure_ascii=False))
+    except Exception as e:
+        print(f"Error: {e}")
+
+    print("-----------------Video---------------")
     try:
         result = searcher.download_video_info("https://youtu.be/r6BVgEcNXY4?si=kSpmZsGKBrSEOnZj")
         with open("post_data/output.json", "w", encoding="utf-8") as f:
