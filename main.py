@@ -5,7 +5,7 @@ This script searches YouTube and returns search results with video information.
 """
 import os
 import hashlib
-import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import string
 import subprocess
@@ -13,10 +13,12 @@ import sys
 import yt_dlp
 import json
 from typing import List, Dict, Any, Optional
-
-from .download_playlist import get_channel_id
-
-from .youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
+try:
+    from .download_playlist import get_channel_id, formatted_playlist_info
+    from .youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
+except ImportError:
+    from download_playlist import get_channel_id, formatted_playlist_info
+    from youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
 
 
 class YouTube:
@@ -189,21 +191,21 @@ class YouTube:
         def format_date(timestamp):
             if isinstance(timestamp, int) or (isinstance(timestamp, str) and timestamp.isdigit()):
                 # Convert unix timestamp to datetime object
-                dt = datetime.datetime.fromtimestamp(int(timestamp), tz=datetime.timezone.utc)
+                dt = datetime.fromtimestamp(int(timestamp), tz=timezone.utc)
                 return dt
             elif isinstance(timestamp, str):
                 # Try to parse ISO or other string formats
                 try:
-                    dt = datetime.datetime.fromisoformat(timestamp)
+                    dt = datetime.fromisoformat(timestamp)
                     # If the datetime is naive, treat as UTC
                     if dt.tzinfo is None:
-                        dt = dt.replace(tzinfo=datetime.timezone.utc)
-                    dt = dt.astimezone(datetime.timezone.utc)
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    dt = dt.astimezone(timezone.utc)
                     return dt
                 except ValueError:
                     pass
             # Default: current UTC time
-            return datetime.datetime.now(datetime.timezone.utc)
+            return datetime.now(timezone.utc)
         
         # Convert to specified format
         current_time = format_date(video_info.get("timestamp", ""))
@@ -226,7 +228,7 @@ class YouTube:
             for item in video_info.get("comments", []):
                 comment_id = item.get("id", "")
                 timestamp = item.get("timestamp")
-                formatted_timestamp = datetime.datetime.fromtimestamp(timestamp)
+                formatted_timestamp = datetime.fromtimestamp(timestamp)
                 
                 comment_data = {
                     "comment_id": comment_id,
@@ -366,7 +368,7 @@ class YouTube:
                     url=None,
                     parent=comment.get("parent", ""),
                     user_pro_pic=comment.get("author_thumbnail", ""),
-                    comment_time=datetime.datetime.fromtimestamp(comment.get("timestamp", ""), tz=datetime.timezone.utc),
+                    comment_time=datetime.fromtimestamp(comment.get("timestamp", ""), tz=timezone.utc),
                     user_name=comment.get("author", ""),
                     user_profile_url=comment.get("author_url", ""),
                     comment_text=comment.get("text", ""),
@@ -451,23 +453,30 @@ class YouTube:
             playlist_info = ydl.extract_info(uploads_playlist_id, download=False)
         return self.formatted_playlist_info(playlist_info)
 
-    def get_all_playlist_video_details(self, playlist_url, limit=None):
+    def get_all_playlist_video_details(self, playlist_url, date_after=None):
+
         ydl_opts = {
-                'quiet': False,
-                'verbose': True,
-            'extract_flat': 'in_playlist',  # Changed from True to 'in_playlist' to get more metadata
+        
+            'quiet': False,
+            'verbose': True,
+            # Changed from True to 'in_playlist' to get more metadata
             'skip_download': True,
             'yes_playlist': True,
-            'playlist_items': limit,
-            'approximate_date': True,  # Get approximate upload dates
+            'playlist_items': None,
+            'approximate_date': True,
+            'write-info-json': True, # Get approximate upload dates
+
+
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             playlist_info = ydl.extract_info(playlist_url, download=False)
-        return self.formatted_playlist_info(playlist_info)
+        return formatted_playlist_info(playlist_info,date_after)
 
-    def formatted_playlist_info(self, playlist_info):
+    def formatted_playlist_info(self, playlist_info,date_after=None):
         videos = []
         for video in playlist_info.get("entries", []):
+            if date_after and datetime.strptime(video.get("upload_date"), "%Y%m%d") < date_after:
+                continue
             videos.append(YoutubeVideo(
                 id=video.get("id"),
                 title=video.get("title"),
@@ -509,7 +518,7 @@ def main():
     print("---------------Playlist-----------------")
     try:
         
-        playlist = searcher.get_all_playlist_video_details("https://www.youtube.com/playlist?list=PLuzIsIPzt7fnlFslhp9QSWHvqM1f6Vk0p")
+        playlist = searcher.get_all_playlist_video_details("https://youtube.com/playlist?list=PLa7mzMQIWEcUvlfEtIeA846CpAr1DrsTV&si=PJ5BGPGDNx4ja-F2",date_after=(datetime.now() - timedelta(days=865)))
         with open("post_data/playlist.json", "w", encoding="utf-8") as f:
                 # result.to_json() returns a JSON string, so just write it directly
                 f.write(json.dumps(playlist.to_dict(), indent=4, ensure_ascii=False))
@@ -518,7 +527,7 @@ def main():
 
     print("---------------Channel-----------------")
     try:
-        channel = searcher.get_all_channel_video_details("https://www.youtube.com/@TEBangla")
+        channel = searcher.get_all_channel_video_details("https://www.youtube.com/@dibbogyaani3949")
         with open("post_data/channel.json", "w", encoding="utf-8") as f:
                 # result.to_json() returns a JSON string, so just write it directly
                 f.write(json.dumps(channel.to_dict(), indent=4, ensure_ascii=False))
