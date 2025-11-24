@@ -2,3 +2,4 @@
 *.webp
 yt_env/
 post_data/
+__pycache__

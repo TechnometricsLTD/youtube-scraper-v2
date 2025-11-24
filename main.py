@@ -5,13 +5,20 @@ This script searches YouTube and returns search results with video information.
 """
 import os
 import hashlib
-import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import string
 import subprocess
 import sys
 import yt_dlp
 import json
 from typing import List, Dict, Any, Optional
+try:
+    from .download_playlist import get_channel_id, formatted_playlist_info
+    from .youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
+except ImportError:
+    from download_playlist import get_channel_id, formatted_playlist_info
+    from youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
 
 
 class YouTube:
@@ -146,6 +153,7 @@ class YouTube:
             print(f"Error saving results: {e}")
     
     def download_video_info(self, url):
+
         info_json_filename = "post_data/video_info.json"
         comments_json_filename = "post_data/comments.json"
         
@@ -176,29 +184,31 @@ class YouTube:
         # with open(original_output_file, 'w', encoding='utf-8') as f:
         #     json.dump(video_info, f, indent=2, ensure_ascii=False)
         # print(f"Original yt-dlp output saved to: {original_output_file}")
+
+
         
         # Format datetime in standard format
         def format_date(timestamp):
             if isinstance(timestamp, int) or (isinstance(timestamp, str) and timestamp.isdigit()):
-                # Convert unix timestamp to ISO 8601 UTC format
-                dt = datetime.datetime.utcfromtimestamp(int(timestamp))
-                return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+                # Convert unix timestamp to datetime object
+                dt = datetime.fromtimestamp(int(timestamp), tz=timezone.utc)
+                return dt
             elif isinstance(timestamp, str):
                 # Try to parse ISO or other string formats
                 try:
-                    dt = datetime.datetime.fromisoformat(timestamp)
+                    dt = datetime.fromisoformat(timestamp)
                     # If the datetime is naive, treat as UTC
                     if dt.tzinfo is None:
-                        dt = dt.replace(tzinfo=datetime.timezone.utc)
-                    dt = dt.astimezone(datetime.timezone.utc)
-                    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    dt = dt.astimezone(timezone.utc)
+                    return dt
                 except ValueError:
                     pass
-            # Default: current UTC time in ISO 8601 format
-            return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+            # Default: current UTC time
+            return datetime.now(timezone.utc)
         
         # Convert to specified format
-        current_time = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        current_time = format_date(video_info.get("timestamp", ""))
         formatted_data = {
             "video_id": video_id,
             "type": "page",
@@ -218,7 +228,7 @@ class YouTube:
             for item in video_info.get("comments", []):
                 comment_id = item.get("id", "")
                 timestamp = item.get("timestamp")
-                formatted_timestamp = datetime.datetime.fromtimestamp(timestamp)
+                formatted_timestamp = datetime.fromtimestamp(timestamp)
                 
                 comment_data = {
                     "comment_id": comment_id,
@@ -337,7 +347,75 @@ class YouTube:
         print(f"Comments and video info extracted")
         # print(f"Total comments from metadata: {comment_count}")
         print(f"Thumbnail saved")
-        return formatted_data
+
+        youtube = Youtube(
+            post_id=video_info.get("id", ""),
+            source="YouTube",
+            post_url=formatted_data.get("post_url", ""),
+            posted_at=formatted_data.get("posted_at", ""),
+            post_text=formatted_data.get("post_text", ""),
+            author=Author(
+                author_id=get_channel_id(video_info.get("uploader_url", "")),
+                fullname=video_info.get("uploader", ""),
+                username=video_info.get("uploader", ""),
+                profile_url=video_info.get("uploader_url", ""),
+                profile_image_url=video_info.get("uploader_avatar", ""),
+                profile_image_path=video_info.get("uploader_avatar", ""),
+            ),
+            comments=[
+                Comment(
+                    comment_id=comment.get("id", ""),
+                    url=None,
+                    parent=comment.get("parent", ""),
+                    user_pro_pic=comment.get("author_thumbnail", ""),
+                    comment_time=datetime.fromtimestamp(comment.get("timestamp", ""), tz=timezone.utc),
+                    user_name=comment.get("author", ""),
+                    user_profile_url=comment.get("author_url", ""),
+                    comment_text=comment.get("text", ""),
+                    author=Author(
+                        author_id=comment.get("author_id", ""),
+                        fullname=comment.get("author", ""),
+                        username=comment.get("author", ""),
+                        profile_url=comment.get("author_url", ""),
+                        profile_image_url=comment.get("author_thumbnail", ""),
+                        profile_image_path=None,
+                    ),
+                    reactions=Reactions(
+                        Total=comment.get("like_count", 0),
+                        Sad=None,
+                        Love=None,
+                        Wow=None,
+                        Like=comment.get("like_count", 0),
+                        Haha=None,
+                        Angry=None,
+                        Care=None,
+                    ),
+                    total_views=comment.get("view_count", 0),
+                    total_replies=comment.get("reply_count", 0),
+                    total_reposts=comment.get("repost_count", 0),
+                    comments_replies_list=[]
+                )
+                for comment in video_info.get("comments", [])
+            ],
+            reactions=Reactions(
+                Total=video_info.get("like_count", 0),
+                Sad=None,
+                Love=None,
+                Wow=None,
+                Like=video_info.get("like_count", 0),
+                Haha=None,
+                Angry=None,
+                Care=None,
+            ),
+            featured_image=None,
+            total_comments=video_info.get("comment_count", 0),
+            total_comments_scraped=len(video_info.get("comments", [])),
+            percent_comments=formatted_data.get("percent_comments", None),
+            total_shares=0,
+            total_views=video_info.get("view_count", 0),
+            checksum=formatted_data.get("checksum", ""),
+        )
+        return youtube
 
     def get_channel_id(self, channel_url):
         # Just extract the channel_id from the channel URL using yt-dlp's metadata extraction,
@@ -373,7 +451,52 @@ class YouTube:
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             playlist_info = ydl.extract_info(uploads_playlist_id, download=False)
-        return playlist_info
+        return self.formatted_playlist_info(playlist_info)
+
+    def get_all_playlist_video_details(self, playlist_url, date_after=None):
+
+        ydl_opts = {
+        
+            'quiet': False,
+            'verbose': True,
+            # Changed from True to 'in_playlist' to get more metadata
+            'skip_download': True,
+            'yes_playlist': True,
+            'playlist_items': None,
+            'approximate_date': True,
+            'write-info-json': True, # Get approximate upload dates
+
+
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            playlist_info = ydl.extract_info(playlist_url, download=False)
+        return formatted_playlist_info(playlist_info,date_after)
+
+    def formatted_playlist_info(self, playlist_info,date_after=None):
+        videos = []
+        for video in playlist_info.get("entries", []):
+            if date_after and datetime.strptime(video.get("upload_date"), "%Y%m%d") < date_after:
+                continue
+            videos.append(YoutubeVideo(
+                id=video.get("id"),
+                title=video.get("title"),
+                description=video.get("description"),
+                url=video.get("url"),
+                source=video.get("channel"),
+                upload_date=video.get("upload_date"),
+                metadata=video
+            ))
+        
+        youtube_playlist = YoutubePlaylist(
+            id=playlist_info.get("id"),
+            title=playlist_info.get("title"),
+            description=playlist_info.get("description"),
+            url=playlist_info.get("channel_url"),
+            channel_id=playlist_info.get("channel_id"),
+            videos=videos,
+        )
+        return youtube_playlist
+
 
 def main():
     
@@ -382,22 +505,45 @@ def main():
     searcher = YouTube()
     
     # Perform search
-    results = searcher.search_youtube("Younus", 20)
-    searcher.display_results(results, "Younus")
+    # results = searcher.search_youtube("Younus", 20)
+    # searcher.display_results(results, "Younus")
 
-    for result in results:
-        print(result['url'])
-        print("--------------------------------")
+    # for result in results:
+    #     print(result['url'])
+    #     print("--------------------------------")
     
     # Print summary
-    print(f"\n✅ Found {len(results)} video(s) for query: 'Younus'")
+    # print(f"\n✅ Found {len(results)} video(s) for query: 'Younus'")
 
-    print("playlist details: ", searcher.get_all_channel_video_details("https://www.youtube.com/@cokestudio"))
+    print("---------------Playlist-----------------")
+    try:
+        
+        playlist = searcher.get_all_playlist_video_details("https://youtube.com/playlist?list=PLa7mzMQIWEcUvlfEtIeA846CpAr1DrsTV&si=PJ5BGPGDNx4ja-F2",date_after=(datetime.now() - timedelta(days=865)))
+        with open("post_data/playlist.json", "w", encoding="utf-8") as f:
+                # result.to_json() returns a JSON string, so just write it directly
+                f.write(json.dumps(playlist.to_dict(), indent=4, ensure_ascii=False))
+    except Exception as e:
+        print(f"Error: {e}")    
 
-    print("--------------------------------")
+    print("---------------Channel-----------------")
+    try:
+        channel = searcher.get_all_channel_video_details("https://www.youtube.com/@dibbogyaani3949")
+        with open("post_data/channel.json", "w", encoding="utf-8") as f:
+                # result.to_json() returns a JSON string, so just write it directly
+                f.write(json.dumps(channel.to_dict(), indent=4, ensure_ascii=False))
+    except Exception as e:
+        print(f"Error: {e}")
 
-    print("video details: ", searcher.download_video_info(results[0]['url']))
+    print("-----------------Video---------------")
+    try:
+        result = searcher.download_video_info("https://youtu.be/r6BVgEcNXY4?si=kSpmZsGKBrSEOnZj")
+        with open("post_data/output.json", "w", encoding="utf-8") as f:
+            # result.to_json() returns a JSON string, so just write it directly
+            f.write(result.to_json())
+    except Exception as e:
+        print(f"Error: {e}")
     
+    print("--------------------------------")
 
 
 if __name__ == "__main__":
