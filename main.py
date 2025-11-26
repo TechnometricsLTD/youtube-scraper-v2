@@ -433,7 +433,7 @@ class YouTube:
             info = ydl.extract_info(channel_url, download=False)
             return info.get('channel_id')
 
-    def get_all_channel_video_details(self, uploads_playlist_url,date_after=None, limit=200,*args,**kwargs):
+    def get_all_channel_video_details(self, uploads_playlist_url,date_after=None, limit=':200',*args,**kwargs):
 
         channel_id = self.get_channel_id(uploads_playlist_url)
         print(channel_id)
@@ -454,7 +454,7 @@ class YouTube:
             playlist_info = ydl.extract_info(uploads_playlist_id, download=False)
         return self.formatted_playlist_info(playlist_info)
 
-    def get_all_playlist_video_details(self, playlist_url, date_after=None,limit=200,*args,**kwargs):
+    def get_all_playlist_video_details(self, playlist_url, date_after=None,limit=':200',*args,**kwargs):
 
         ydl_opts = {
             'ignoreerrors': True,
