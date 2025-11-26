@@ -433,7 +433,7 @@ class YouTube:
             info = ydl.extract_info(channel_url, download=False)
             return info.get('channel_id')
 
-    def get_all_channel_video_details(self, uploads_playlist_url, limit=None):
+    def get_all_channel_video_details(self, uploads_playlist_url,date_after=None, limit=200,*args,**kwargs):
 
         channel_id = self.get_channel_id(uploads_playlist_url)
         print(channel_id)
@@ -448,21 +448,22 @@ class YouTube:
             'skip_download': True,
             'yes_playlist': True,
             'playlist_items': limit,
+            'ignoreerrors': True,
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             playlist_info = ydl.extract_info(uploads_playlist_id, download=False)
         return self.formatted_playlist_info(playlist_info)
 
-    def get_all_playlist_video_details(self, playlist_url, date_after=None):
+    def get_all_playlist_video_details(self, playlist_url, date_after=None,limit=200,*args,**kwargs):
 
         ydl_opts = {
-        
+            'ignoreerrors': True,
             'quiet': False,
             'verbose': True,
             # Changed from True to 'in_playlist' to get more metadata
             'skip_download': True,
             'yes_playlist': True,
-            'playlist_items': None,
+            'playlist_items': limit,
             'approximate_date': True,
             'write-info-json': True, # Get approximate upload dates
 
@@ -470,6 +471,7 @@ class YouTube:
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             playlist_info = ydl.extract_info(playlist_url, download=False)
+        # print(playlist_info)
         return formatted_playlist_info(playlist_info,date_after)
 
     def formatted_playlist_info(self, playlist_info,date_after=None):
@@ -518,12 +520,12 @@ def main():
     print("---------------Playlist-----------------")
     try:
         
-        playlist = searcher.get_all_playlist_video_details("https://youtube.com/playlist?list=PLa7mzMQIWEcUvlfEtIeA846CpAr1DrsTV&si=PJ5BGPGDNx4ja-F2",date_after=(datetime.now() - timedelta(days=865)))
+        playlist = searcher.get_all_playlist_video_details("https://youtube.com/playlist?list=PLHpPzPKcFuMTrjmXxmMFUGalR00wy_wda&si=1DqrnmPq7N-_6VxC",date_after=(datetime.now() - timedelta(days=865)))
         with open("post_data/playlist.json", "w", encoding="utf-8") as f:
                 # result.to_json() returns a JSON string, so just write it directly
                 f.write(json.dumps(playlist.to_dict(), indent=4, ensure_ascii=False))
     except Exception as e:
-        print(f"Error: {e}")    
+        print(f"Playlist Error: {e}")    
 
     print("---------------Channel-----------------")
     try:
@@ -532,7 +534,7 @@ def main():
                 # result.to_json() returns a JSON string, so just write it directly
                 f.write(json.dumps(channel.to_dict(), indent=4, ensure_ascii=False))
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Channel Error: {e}")
 
     print("-----------------Video---------------")
     try:
@@ -541,7 +543,7 @@ def main():
             # result.to_json() returns a JSON string, so just write it directly
             f.write(result.to_json())
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Video Error: {e}")
     
     print("--------------------------------")
 
