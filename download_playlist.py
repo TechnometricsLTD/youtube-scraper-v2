@@ -4,8 +4,7 @@ import sys
 import requests
 import re
 from dataclasses import dataclass
-
-
+from datetime import datetime, timedelta
 @dataclass
 class YoutubeVideo:
     id: str
@@ -86,33 +85,48 @@ def get_all_channel_video_details(uploads_playlist_url, limit=None):
         playlist_info = ydl.extract_info(uploads_playlist_id, download=False)
     return formatted_playlist_info(playlist_info)
  
-def get_all_playlist_video_details(playlist_url, limit=None):
+def get_all_playlist_video_details(playlist_url, date_after=None):
+
     ydl_opts = {
+       
         'quiet': False,
         'verbose': True,
-        'extract_flat': 'in_playlist',  # Changed from True to 'in_playlist' to get more metadata
+         # Changed from True to 'in_playlist' to get more metadata
         'skip_download': True,
         'yes_playlist': True,
-        'playlist_items': limit,
-        'approximate_date': True,  # Get approximate upload dates
+        'playlist_items': None,
+        'approximate_date': True,
+        'write-info-json': True, # Get approximate upload dates
+
+
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         playlist_info = ydl.extract_info(playlist_url, download=False)
-    return formatted_playlist_info(playlist_info)
+    return formatted_playlist_info(playlist_info,date_after)
 
-def formatted_playlist_info(playlist_info):
+def formatted_playlist_info(playlist_info,date_after=None,*args,**kwargs):
     videos = []
-    for video in playlist_info.get("entries", []):
-        videos.append(YoutubeVideo(
-            id=video.get("id"),
-            title=video.get("title"),
-            description=video.get("description"),
-            url=video.get("url"),
-            source=video.get("channel"),
-            upload_date=video.get("upload_date"),
-            metadata=video
-        ))
-    
+    try:
+        for video in playlist_info.get("entries", []):
+            try:
+                if date_after and datetime.strptime(video.get("upload_date"), "%Y%m%d") < date_after:
+                    print(f"Skipping video {video.get('title')} because it is older than {date_after}")
+                    continue
+                videos.append(YoutubeVideo(
+                    id=video.get("id"),
+                    title=video.get("title"),
+                    description=video.get("description"),
+                    url=video.get("url"),
+                    source=video.get("channel"),
+                    upload_date=video.get("upload_date"),
+                    metadata=video
+                ))
+            except Exception as e:
+                print(f"Formatted Playlist Info Error: {e}")
+    except Exception as e:
+        print(f"Formatted Playlist Info Error: {e}")
+
+    print(f"Playlist: Found {len(videos)} videos")
     youtube_playlist = YoutubePlaylist(
         id=playlist_info.get("id"),
         title=playlist_info.get("title"),
@@ -121,6 +135,8 @@ def formatted_playlist_info(playlist_info):
         channel_id=playlist_info.get("channel_id"),
         videos=videos,
     )
+    # print(f"Playlist: {youtube_playlist.to_dict()}")
+    print("--------------------------------")
     return youtube_playlist
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -131,7 +147,7 @@ if __name__ == "__main__":
         limit = int(sys.argv[2])
     else:
         limit = None
-    playlist_info = get_all_playlist_video_details(channel_url, limit)
+    playlist_info = get_all_playlist_video_details(channel_url,date_after=datetime.now() - timedelta(days=365))
     # Save to JSON file
     output_file = "uploads_playlist_videos.json"
     with open(output_file, "w", encoding="utf-8") as f:
