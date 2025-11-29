@@ -116,7 +116,8 @@ def formatted_playlist_info(playlist_info,date_after=None,*args,**kwargs):
                     id=video.get("id"),
                     title=video.get("title"),
                     description=video.get("description"),
-                    url=video.get("url"),
+                    # if video.get("url")
+                    url=video.get("url") if video.get("url") else video.get("webpage_url"),
                     source=video.get("channel"),
                     upload_date=video.get("upload_date"),
                     metadata=video
