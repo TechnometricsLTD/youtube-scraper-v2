@@ -364,9 +364,9 @@ class YouTube:
             post_id=video_info.get("id", ""),
             source=video_info.get("uploader", ""),
             post_url=formatted_data.get("post_url", ""),
-            post_title=formatted_data.get("post_title", ""),
+            post_title=formatted_data.get("post_text", ""),
             posted_at=formatted_data.get("posted_at", ""),
-            post_text=formatted_data.get("post_text", ""),
+            post_text=formatted_data.get("post_title", ""),
             author=Author(
                 author_id=get_channel_id(video_info.get("uploader_url", "")),
                 name=video_info.get("uploader", ""),
