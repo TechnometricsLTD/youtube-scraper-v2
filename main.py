@@ -13,15 +13,14 @@ import sys
 import yt_dlp
 import json
 from typing import List, Dict, Any, Optional
-
-from utils import nest_comments
 try:
     from .download_playlist import get_channel_id, formatted_playlist_info
     from .youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
+    from .utils import download_image, nest_comments
 except ImportError:
     from download_playlist import get_channel_id, formatted_playlist_info
     from youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
-    from utils import download_image
+    from utils import download_image, nest_comments
 
 class YouTube:
     def __init__(self):
