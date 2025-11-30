@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import datetime
 import json
 
@@ -32,9 +32,9 @@ class Reactions:
 @dataclass
 class Author:
     author_id: int
-    fullname: str
+    name: str
     username: str
-    profile_url: str
+    url: str
     profile_image_url: str
     profile_image_path: str
 
@@ -45,6 +45,7 @@ class Comment:
     comment_id: int
     url: str
     parent: str
+    reply_to: str
     user_pro_pic: str
     comment_time: datetime
     user_name: str
@@ -66,12 +67,14 @@ class Youtube:
     post_id: int
     source: str
     post_url: str
+    post_title: str
     posted_at: datetime
     post_text: str
     author: Author
     comments: list[Comment]
     reactions: Reactions
-    featured_image: str = ''
+    featured_images: list[str] = field(default_factory=list)
+    featured_image_path: list[str] = field(default_factory=list)
     total_comments: int = 0
     total_comments_scraped: int = 0
     percent_comments: float = 0.0

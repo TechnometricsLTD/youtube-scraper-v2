@@ -13,13 +13,15 @@ import sys
 import yt_dlp
 import json
 from typing import List, Dict, Any, Optional
+
+from utils import nest_comments
 try:
     from .download_playlist import get_channel_id, formatted_playlist_info
     from .youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
 except ImportError:
     from download_playlist import get_channel_id, formatted_playlist_info
     from youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
-
+    from utils import download_image
 
 class YouTube:
     def __init__(self):
@@ -232,7 +234,7 @@ class YouTube:
                 
                 comment_data = {
                     "comment_id": comment_id,
-                    "parent": item.get("parent", ""),
+                    "parent": video_id if item.get("parent","")=="root" else item.get("parent", ""),
                     "user_pro_pic": item.get("author_thumbnail", ""),
                     "comment_time": formatted_timestamp,
                     "user_name": item.get("author", ""),
@@ -252,7 +254,7 @@ class YouTube:
             parent = comment["parent"]
             
             # Skip root comments for now
-            if parent != "root":
+            if parent != video_id:
                 # For replies, the ID format is parent_id.reply_id
                 # Extract parent_id from the reply's parent field
                 parent_id = parent
@@ -265,7 +267,7 @@ class YouTube:
         # Third pass: build the hierarchical structure
         for comment_id, comment in all_comments.items():
             # Only process root comments (these will be in the main comments array)
-            if comment["parent"] == "root":
+            if comment["parent"] == video_id:
                 # Add direct children
                 if comment_id in parent_to_children:
                     for child in parent_to_children[comment_id]:
@@ -348,25 +350,37 @@ class YouTube:
         # print(f"Total comments from metadata: {comment_count}")
         print(f"Thumbnail saved")
 
+        # Extract thumbnail URLs from thumbnails list (can be dicts or strings)
+        def get_thumbnail_url(thumbnail):
+            """Extract URL from thumbnail (handles both dict and string formats)"""
+            if isinstance(thumbnail, dict):
+                return thumbnail.get("url", "")
+            return thumbnail if isinstance(thumbnail, str) else ""
+
+        thumbnails = video_info.get("thumbnails", [])
+        thumbnail_urls = [get_thumbnail_url(t) for t in thumbnails if get_thumbnail_url(t)]
+
         youtube = Youtube(
             post_id=video_info.get("id", ""),
-            source="YouTube",
+            source=video_info.get("uploader", ""),
             post_url=formatted_data.get("post_url", ""),
+            post_title=formatted_data.get("post_title", ""),
             posted_at=formatted_data.get("posted_at", ""),
             post_text=formatted_data.get("post_text", ""),
             author=Author(
                 author_id=get_channel_id(video_info.get("uploader_url", "")),
-                fullname=video_info.get("uploader", ""),
+                name=video_info.get("uploader", ""),
                 username=video_info.get("uploader", ""),
-                profile_url=video_info.get("uploader_url", ""),
+                url=video_info.get("uploader_url", ""),
                 profile_image_url=video_info.get("uploader_avatar", ""),
-                profile_image_path=video_info.get("uploader_avatar", ""),
+                profile_image_path=download_image(video_info.get("uploader_avatar", ""), f"/tmp/youtube/{video_id}"),
             ),
-            comments=[
+            comments=nest_comments([
                 Comment(
                     comment_id=comment.get("id", ""),
-                    url=None,
-                    parent=comment.get("parent", ""),
+                    url=f"https://www.youtube.com/watch?v={video_id}&lc={comment.get("id", "")}",
+                    parent=video_id if comment.get("parent","")=="root" else comment.get("parent", ""),
+                    reply_to=video_id if comment.get("parent","")=="root" else comment.get("parent", ""),
                     user_pro_pic=comment.get("author_thumbnail", ""),
                     comment_time=datetime.fromtimestamp(comment.get("timestamp", ""), tz=timezone.utc),
                     user_name=comment.get("author", ""),
@@ -374,11 +388,11 @@ class YouTube:
                     comment_text=comment.get("text", ""),
                     author=Author(
                         author_id=comment.get("author_id", ""),
-                        fullname=comment.get("author", ""),
+                        name=comment.get("author", ""),
                         username=comment.get("author", ""),
-                        profile_url=comment.get("author_url", ""),
+                        url=comment.get("author_url", ""),
                         profile_image_url=comment.get("author_thumbnail", ""),
-                        profile_image_path=None,
+                        profile_image_path=download_image(comment.get("author_thumbnail", ""), f"/tmp/youtube/{video_id}"),
                     ),
                     reactions=Reactions(
                         Total=comment.get("like_count", 0),
@@ -396,7 +410,7 @@ class YouTube:
                     comments_replies_list=[]
                 )
                 for comment in video_info.get("comments", [])
-            ],
+            ],video_id),
             reactions=Reactions(
                 Total=video_info.get("like_count", 0),
                 Sad=None,
@@ -407,7 +421,8 @@ class YouTube:
                 Angry=None,
                 Care=None,
             ),
-            featured_image=None,
+            featured_images=thumbnail_urls,
+            featured_image_path=[download_image(url, f"/tmp/youtube/{video_id}") for url in thumbnail_urls],
             total_comments=video_info.get("comment_count", 0),
             total_comments_scraped=len(video_info.get("comments", [])),
             percent_comments=formatted_data.get("percent_comments", None),
@@ -516,7 +531,7 @@ def main():
     
     # Print summary
     # print(f"\n✅ Found {len(results)} video(s) for query: 'Younus'")
-
+    '''
     print("---------------Playlist-----------------")
     try:
         
@@ -536,6 +551,7 @@ def main():
     except Exception as e:
         print(f"Channel Error: {e}")
 
+    '''
     print("-----------------Video---------------")
     try:
         result = searcher.download_video_info("https://youtu.be/r6BVgEcNXY4?si=kSpmZsGKBrSEOnZj")
