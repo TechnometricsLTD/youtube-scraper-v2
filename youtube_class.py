@@ -1,6 +1,32 @@
 from dataclasses import dataclass, field
 import datetime
 import json
+from typing import Dict
+
+@dataclass
+class Source:
+    name: str
+    author_id: str
+    url: str
+
+@dataclass
+class AuthorMetadata:
+    name: str
+    author_id: str
+    url: str
+    profile_image_path: str
+    profile_image_url: str
+
+
+@dataclass
+class Metadata:
+    source: Source = field(default_factory=Source)
+    group: Dict = field(default_factory=dict)
+    post: Dict = field(default_factory=dict)
+    author: AuthorMetadata = field(default_factory=AuthorMetadata)
+
+    def to_json(self):
+        return json.dumps(self.__dict__, ensure_ascii=False, indent=4)
 
 
 def datetime_to_dict(obj):
@@ -80,6 +106,7 @@ class Youtube:
     percent_comments: float = 0.0
     total_shares: int = 0
     total_views: int = 0
+    metadata: Metadata = None
     checksum: str = ''
 
     def to_json(self):
@@ -126,3 +153,4 @@ class YoutubePlaylist:
             'channel_id': self.channel_id,
             'videos': [video.to_dict() for video in self.videos]
         }
+

@@ -15,11 +15,31 @@ import json
 from typing import List, Dict, Any, Optional
 try:
     from .download_playlist import get_channel_id, formatted_playlist_info
-    from .youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
-    from .utils import download_image, nest_comments
+    from .youtube_class import (
+        Author,
+        Comment,
+        Reactions,
+        Youtube,
+        YoutubePlaylist,
+        YoutubeVideo,
+        Metadata,
+        Source,
+        AuthorMetadata,
+    )
+    from .utils import nest_comments
 except ImportError:
     from download_playlist import get_channel_id, formatted_playlist_info
-    from youtube_class import Author, Comment, Reactions, Youtube, YoutubePlaylist, YoutubeVideo
+    from youtube_class import (
+        Author,
+        Comment,
+        Reactions,
+        Youtube,
+        YoutubePlaylist,
+        YoutubeVideo,
+        Metadata,
+        Source,
+        AuthorMetadata,
+    )
     from utils import download_image, nest_comments
 
 class YouTube:
@@ -429,6 +449,25 @@ class YouTube:
             total_views=video_info.get("view_count", 0),
             checksum=formatted_data.get("checksum", ""),
         )
+
+        # Initialize metadata object on Youtube instance
+        youtube.metadata = Metadata(
+            source=Source(
+                name=youtube.source,
+                author_id=str(youtube.author.author_id),
+                url=youtube.author.url,
+            ),
+            group={},
+            post={},
+            author=AuthorMetadata(
+                name=youtube.author.name,
+                author_id=str(youtube.author.author_id),
+                url=youtube.author.url,
+                profile_image_path=youtube.author.profile_image_path,
+                profile_image_url=youtube.author.profile_image_url,
+            ),
+        )
+       
         return youtube
 
     def get_channel_id(self, channel_url):
