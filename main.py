@@ -26,7 +26,7 @@ try:
         Source,
         AuthorMetadata,
     )
-    from .utils import nest_comments
+    from .utils import nest_comments, download_image
 except ImportError:
     from download_playlist import get_channel_id, formatted_playlist_info
     from youtube_class import (
