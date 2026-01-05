@@ -83,7 +83,7 @@ class YouTube:
             with yt_dlp.YoutubeDL(fast_opts) as ydl:
                 # Extract video information
                 results = ydl.extract_info(search_url, download=False)
-                
+                print(results)
                 if not results or 'entries' not in results:
                     print(f"No results found for query: {query}")
                     return []
@@ -92,14 +92,10 @@ class YouTube:
                 for entry in results['entries']:
                     if entry:
                         video_info = {
-                            'title': entry.get('title', 'Unknown'),
-                            'url': entry.get('url', ''),
-                            'webpage_url': entry.get('webpage_url', f"https://www.youtube.com/watch?v={entry.get('id', '')}"),
-                            'duration': entry.get('duration', 0),
-                            'view_count': entry.get('view_count', 0),
-                            'uploader': entry.get('uploader', 'Unknown'),
-                            'thumbnail': entry.get('thumbnail', ''),
-                            'id': entry.get('id', ''),
+                            'post_text': entry.get('title', 'Unknown'),
+                            'post_link': entry.get('webpage_url', f"https://www.youtube.com/watch?v={entry.get('id', '')}"),
+                            'source_text': entry.get('uploader', 'Unknown'),
+                            'time_element': "",
                         }
                         videos.append(video_info)
                 print("✅ Search completed successfully")
@@ -150,13 +146,13 @@ class YouTube:
         print("=" * 80)
         
         for i, video in enumerate(videos, 1):
-            print(f"\n{i}. {video['title']}")
-            print(f"   👤 Uploader: {video['uploader']}")
-            print(f"   ⏱️  Duration: {self.format_duration(video['duration'])}")
-            print(f"   👁️  Views: {self.format_view_count(video['view_count'])}")
+            print(f"\n{i}.\nPost_Text: {video['post_text']}")
+            print(f"Post_Link: {video['post_link']}")
+            print(f"Source_Text: {video['source_text']}")
+            print(f"Time_Element: {video['time_element']}")
             
             # Handle URL
-            webpage_url = video['webpage_url']
+            webpage_url = video['post_link']
             if webpage_url:
                 print(f"   🔗 URL: {webpage_url}")
             else:
@@ -182,8 +178,13 @@ class YouTube:
         print(f"Extracting video info and comments from: {url}")
         subprocess.run([
             sys.executable, "-m", "yt_dlp", url, 
-            "--write-thumbnail", "--skip-download", "--write-info-json",
-            "--write-comments", "--output", "%(id)s"
+            "--write-thumbnail",
+            "--skip-download",
+            "--write-info-json",
+            "--no-playlist",
+            "--playlist-items", "1",
+            "--write-comments",
+            "--output", "%(id)s"
         ])
         
         # Find the info JSON file
@@ -560,15 +561,15 @@ def main():
     searcher = YouTube()
     
     # Perform search
-    # results = searcher.search_youtube("Younus", 20)
-    # searcher.display_results(results, "Younus")
+    results = searcher.search_youtube("Younus", 20)
+    searcher.display_results(results, "Younus")
 
-    # for result in results:
-    #     print(result['url'])
-    #     print("--------------------------------")
+    for result in results:
+        print(result['post_link'])
+        print("--------------------------------")
     
     # Print summary
-    # print(f"\n✅ Found {len(results)} video(s) for query: 'Younus'")
+    print(f"\n✅ Found {len(results)} video(s) for query: 'Younus'")
     '''
     print("---------------Playlist-----------------")
     try:
@@ -589,7 +590,7 @@ def main():
     except Exception as e:
         print(f"Channel Error: {e}")
 
-    '''
+    
     print("-----------------Video---------------")
     try:
         result = searcher.download_video_info("https://youtu.be/r6BVgEcNXY4?si=kSpmZsGKBrSEOnZj")
@@ -598,7 +599,7 @@ def main():
             f.write(result.to_json())
     except Exception as e:
         print(f"Video Error: {e}")
-    
+    '''
     print("--------------------------------")
 
 
