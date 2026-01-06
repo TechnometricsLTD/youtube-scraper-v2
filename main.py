@@ -96,6 +96,7 @@ class YouTube:
                             'post_link': entry.get('webpage_url', f"https://www.youtube.com/watch?v={entry.get('id', '')}"),
                             'source_text': entry.get('uploader', 'Unknown'),
                             'time_element': "",
+                            'attached_post': None,
                         }
                         videos.append(video_info)
                 print("✅ Search completed successfully")
