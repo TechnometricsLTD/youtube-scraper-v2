@@ -3,6 +3,7 @@
 YouTube Search Script using yt-dlp
 This script searches YouTube and returns search results with video information.
 """
+from pprint import pprint
 import os
 import hashlib
 from datetime import datetime, timedelta, timezone
@@ -41,6 +42,15 @@ except ImportError:
         AuthorMetadata,
     )
     from utils import download_image, nest_comments
+from dataclasses import dataclass
+@dataclass
+class Search:
+    source: str
+    post_text: str
+    posted_at: datetime
+    post_url: str
+    attached_post: str=None
+    platform: str='Y'
 
 class YouTube:
     def __init__(self):
@@ -91,13 +101,12 @@ class YouTube:
                 videos = []
                 for entry in results['entries']:
                     if entry:
-                        video_info = {
-                            'post_text': entry.get('title', 'Unknown'),
-                            'post_link': entry.get('webpage_url', f"https://www.youtube.com/watch?v={entry.get('id', '')}"),
-                            'source_text': entry.get('uploader', 'Unknown'),
-                            'time_element': "",
-                            'attached_post': None,
-                        }
+                        video_info = Search(
+                            post_text=entry.get('title', 'Unknown'),
+                            post_url=entry.get('webpage_url', f"https://www.youtube.com/watch?v={entry.get('id', '')}"),
+                            source=entry.get('uploader', 'Unknown'),
+                            posted_at="",
+                        )    
                         videos.append(video_info)
                 print("✅ Search completed successfully")
                 return videos
@@ -563,11 +572,12 @@ def main():
     
     # Perform search
     results = searcher.search_youtube("Younus", 20)
-    searcher.display_results(results, "Younus")
+    # searcher.display_results(results, "Younus")
 
-    for result in results:
-        print(result['post_link'])
-        print("--------------------------------")
+    # for result in results:
+    #     print(result['post_url'])
+    #     print("--------------------------------")
+    pprint(results)
     
     # Print summary
     print(f"\n✅ Found {len(results)} video(s) for query: 'Younus'")
