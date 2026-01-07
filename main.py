@@ -47,7 +47,7 @@ from dataclasses import dataclass
 class Search:
     source: str
     post_text: str
-    posted_at: datetime= datetime.now()
+    posted_at: datetime= datetime.now(timezone.utc)
     post_url: str
     attached_post: str=None
     platform: str='Y'
