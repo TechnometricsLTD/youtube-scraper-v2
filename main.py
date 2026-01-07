@@ -47,7 +47,7 @@ from dataclasses import dataclass
 class Search:
     source: str
     post_text: str
-    posted_at: datetime= datetime.now(timezone.utc)
+    posted_at: datetime
     post_url: str
     attached_post: str=None
     platform: str='Y'
@@ -105,7 +105,7 @@ class YouTube:
                             post_text=entry.get('title', 'Unknown'),
                             post_url=entry.get('webpage_url', f"https://www.youtube.com/watch?v={entry.get('id', '')}"),
                             source=entry.get('uploader', 'Unknown'),
-                            posted_at="",
+                            posted_at=datetime.now(timezone.utc),
                         )    
                         videos.append(video_info)
                 print("✅ Search completed successfully")
