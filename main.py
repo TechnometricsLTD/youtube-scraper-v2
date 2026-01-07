@@ -47,7 +47,7 @@ from dataclasses import dataclass
 class Search:
     source: str
     post_text: str
-    posted_at: datetime
+    posted_at: datetime= datetime.now()
     post_url: str
     attached_post: str=None
     platform: str='Y'
